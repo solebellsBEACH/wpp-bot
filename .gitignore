@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Sessão WhatsApp (credenciais sensíveis)
+auth_info/
+
+# Logs e temporários
+*.log
+logs/
+tmp/
+
+# Ambiente local / editor
+.env
+.env.*
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/

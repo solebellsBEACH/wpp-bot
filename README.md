@@ -1,49 +1,75 @@
 # wpp-bot
 
-Bot para WhatsApp baseado no [`@whiskeysockets/baileys`](https://github.com/WhiskeySockets/Baileys), com fluxo de atendimento simples e script auxiliar para envio manual de mensagens.
+Bot para WhatsApp baseado no [`@whiskeysockets/baileys`](https://github.com/WhiskeySockets/Baileys), escrito em TypeScript e com arquitetura modular para adicionar/remover funcionalidades em tempo real.
 
 ## Requisitos
-- Node.js 18 ou superior (necessário suporte a módulos ES e `fetch`)
-- Conta WhatsApp válida (número real que receberá o pareamento)
-- Dependências instaladas via `npm install`
 
-## Configuração inicial
+- Node.js 18 ou superior (ESM nativo e `fetch`)
+- Conta WhatsApp válida (número real que fará o pareamento)
+- Dependências instaladas com `npm install`
+
+As credenciais da sessão ficam no diretório `auth_info/`. Preserve essa pasta após o primeiro pareamento.
+
+## Comandos principais
 
 ```bash
+# instalar dependências
 npm install
+
+# desenvolvimento: recarrega automaticamente (watch) e mantém a sessão ativa
+npm run dev
+
+# build para produção na pasta dist/
+npm run build
+
+# executar build compilado
+npm start
+
+# envio manual de mensagem (usa mesma sessão do bot)
+npm run send -- <numero-ou-jid> "mensagem a enviar"
 ```
 
-As credenciais de sessão ficam em `auth_info/`. Após o pareamento, preserve essa pasta para evitar ter que autenticar novamente.
+### Reload sem reiniciar o processo
 
-## Executando o bot principal
+As funcionalidades do bot moram em `src/feature-definitions.ts`. Sempre que você alterar esse arquivo enquanto o `npm run dev` estiver rodando:
 
-```bash
-node index.js
-```
+1. O watcher do arquivo dispara um reload dinâmico (sem reiniciar o processo nem perder a sessão).
+2. As entradas mudadas são removidas/adicionadas automaticamente no registro de funcionalidades.
 
-1. Escaneie o QR Code no terminal com o aplicativo WhatsApp (Menu → Aparelhos conectados).
-2. Aguarde o log `Bot conectado`. A partir daí:
-   - O bot responde `👋 Hello, world!` a qualquer mensagem que contenha apenas `hello` (minúsculo).
-   - Novas mensagens recebidas e enviadas são logadas com hora e mascaramento básico do número.
-3. A sessão se mantém ativa até que o processo seja encerrado. Caso precise reconectar, o bot tenta automaticamente com backoff exponencial.
+Isso permite iterar em respostas, menus e fluxos sem precisar “renderizar” novamente ou refazer o pareamento com o WhatsApp.
 
-## Enviando uma mensagem manual
+Alterações em outros arquivos TypeScript provocam restart automático do processo via `tsx watch`.
 
-```bash
-node send.js <numero-ou-jid> "mensagem a enviar"
-```
+### Logs automáticos para número padrão
 
-- `<numero-ou-jid>` pode ser um número com DDI/DDD (`5527999...`) ou um JID completo (`5527999...@s.whatsapp.net`). Se omitido, usa o destinatário padrão configurado no script.
-- A primeira execução também solicitará o pareamento (QR code), caso a sessão ainda não esteja autorizada.
-- Ao final, o terminal confirma o envio com o número mascarado.
+O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT_LOG_JID` (ou, caso ausente, utiliza `BOT_TEST_JID` e finalmente `5527995260672@s.whatsapp.net`). Ao iniciar, ele também dispara `STARTUP_LOG_MESSAGE` para o mesmo destinatário. O log inclui remetente/destino mascarados, nome (quando disponível) e o conteúdo envolvido.
 
-## Dicas e manutenção
-- Não compartilhe a pasta `auth_info/`. Ela contém as credenciais da sessão.
-- Se o QR não aparecer ou a sessão expirar, apague `auth_info/` com o processo parado e execute novamente para reautorizar.
-- Ajuste respostas automáticas em `index.js` dentro do listener `messages.upsert`.
-- Atualize o Baileys, quando necessário, com `npm install @whiskeysockets/baileys@latest` (verifique possíveis breaking changes antes).
+## Estrutura do projeto
+
+- `src/bot.ts`: classe `Bot`, responsável por conexão, QR Code, backoff e dispatch das funcionalidades.
+- `src/features.ts`: registro (`FeatureRegistry`) com métodos `set`, `get`, `delete` e o contexto de mensagens.
+- `src/feature-loader.ts`: orquestra o carregamento e o hot reload das funcionalidades.
+- `src/feature-definitions.ts`: funcionalidades padrão (`hello`, `menu`). Altere aqui para criar novos comandos em tempo real.
+- `src/logger.ts`: utilitário de logs coloridos com mascaramento de JIDs.
+- `src/whatsapp.ts`: criação/configuração do socket Baileys e helpers de sessão.
+- `src/send.ts`: script CLI para envio manual de mensagens pela mesma sessão.
+
+## Fluxo de uso
+
+1. Rode `npm run dev`.
+2. Escaneie o QR Code impresso no terminal (WhatsApp → Aparelhos conectados).
+3. Espere o log `✅ Bot conectado`. Um auto-teste envia mensagem para o próprio número configurado.
+4. Digite `menu` ou `hello` para testar. Ajuste suas respostas em `src/feature-definitions.ts` e salve; o bot recarrega a funcionalidade instantaneamente.
+
+## Manutenção e cuidados
+
+- **backup de sessão:** mantenha `auth_info/` fora do versionamento (`.gitignore`) e não compartilhe.
+- **reautorização:** se o QR parar de aparecer ou a sessão expirar, delete `auth_info/` com o bot parado e pareie novamente.
+- **atualização do Baileys:** execute `npm install @whiskeysockets/baileys@latest` (verifique breaking changes).
+- **logs:** todos os eventos são exibidos no terminal com horários e números mascarados.
 
 ## Troubleshooting
-- **Erro ao enviar mensagem / sessão não abre:** execute `node index.js` manualmente, espere terminar o pareamento, depois volte a rodar o script desejado.
-- **Sessão desconectada pelo WhatsApp:** verifique os logs; se o motivo for `loggedOut`, limpe `auth_info/` e repita o pareamento.
-- **Mensagens não chegam:** certifique-se de que o número destinatário está correto (inclua DDI/DDD) e que o aparelho destinatário possui WhatsApp ativo.
+
+- **`tsc: not found`** – instale as dependências (`npm install`) antes de `npm run build`.
+- **Sessão desconectada (`loggedOut`)** – remova `auth_info/` e refaça o pareamento.
+- **Mensagens não chegam** – confirme DDI/DDD do número, conectividade do aparelho e permissões do WhatsApp.

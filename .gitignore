@@ -4,6 +4,10 @@ node_modules/
 # Sessão WhatsApp (credenciais sensíveis)
 auth_info/
 
+# Build artefacts
+dist/
+*.tsbuildinfo
+
 # Logs e temporários
 *.log
 logs/

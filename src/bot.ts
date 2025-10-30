@@ -8,6 +8,11 @@ import {
 } from './features.js'
 import { log, maskJid } from './logger.js'
 import { createSocket, type CreateSocketOptions } from './whatsapp.js'
+import {
+  ConversationManager,
+  type ConversationConfig
+} from './conversation/manager.js'
+import { normalizeJid } from './utils/jid.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'
@@ -25,6 +30,7 @@ export interface BotHooks {
 export interface BotOptions extends CreateSocketOptions {
   autoTestJid?: string
   logRecipientJid?: string
+  conversationConfig?: Partial<ConversationConfig>
   hooks?: BotHooks
 }
 
@@ -32,12 +38,20 @@ export class Bot {
   private sock?: WASocket
   private startPromise?: Promise<WASocket>
   private retries = 0
+  private readonly conversationManager: ConversationManager
 
   constructor(
     private readonly options: BotOptions = {},
     private readonly features: FeatureRegistry = featureRegistry
   ) {
     this.ensureDefaultFeatures()
+    this.conversationManager = new ConversationManager({
+      sendText: (jid, text, options) => this.sendText(jid, text, options),
+      logger: {
+        error: (message, err) => log.err(message, (err as Error)?.message ?? err)
+      },
+      config: this.options.conversationConfig
+    })
   }
 
   setFeature(definition: FeatureDefinition): void {
@@ -95,6 +109,7 @@ export class Bot {
           await this.runHealthCheck(sock, me)
         }
         await this.notifyStartup()
+        await this.greetDefaultRecipient()
       }
 
       if (connection === 'close') {
@@ -164,6 +179,13 @@ export class Bot {
     }
   }
 
+  private async greetDefaultRecipient(): Promise<void> {
+    const recipient = this.getLogRecipient()
+    if (!recipient) return
+
+    await this.conversationManager.startConversation(recipient)
+  }
+
   private showQrCode(qr: string): void {
     console.clear()
     log.info('Escaneie o QR abaixo para parear esta sessão')
@@ -184,6 +206,10 @@ export class Bot {
 
     log.msgIn(from, name, text)
     await this.forwardLogMessage(from, name, text)
+
+    if (await this.conversationManager.handleMessage(from, text)) {
+      return
+    }
 
     const normalized = text.trim().toLowerCase()
     const feature = this.features.get(normalized)
@@ -241,7 +267,9 @@ export class Bot {
     const sock = this.sock
     if (!sock) throw new Error('WhatsApp socket não está conectado')
 
-    await sock.sendMessage(to, { text }, { forceNewSession: true } as any)
+    const target = normalizeJid(to)
+
+    await sock.sendMessage(target, { text }, { forceNewSession: true } as any)
     log.msgOut(to, text)
   }
 

@@ -44,6 +44,10 @@ Alterações em outros arquivos TypeScript provocam restart automático do proce
 
 O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT_LOG_JID` (ou, caso ausente, utiliza `BOT_TEST_JID` e finalmente `5527995260672@s.whatsapp.net`). Ao iniciar, ele também dispara `STARTUP_LOG_MESSAGE` para o mesmo destinatário. O log inclui remetente/destino mascarados, nome (quando disponível) e o conteúdo envolvido.
 
+### Personalizando o fluxo de atendimento
+
+Os textos e opções do atendimento automatizado ficam concentrados em `src/conversation/manager.ts`. Ajuste o `DEFAULT_CONFIG` ou injete um `conversationConfig` ao instanciar o `Bot` para adaptar mensagens, URLs e contatos sem mexer na lógica da máquina de estados.
+
 ## Estrutura do projeto
 
 - `src/bot.ts`: classe `Bot`, responsável por conexão, QR Code, backoff e dispatch das funcionalidades.
@@ -51,7 +55,9 @@ O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT
 - `src/feature-loader.ts`: orquestra o carregamento e o hot reload das funcionalidades.
 - `src/feature-definitions.ts`: funcionalidades padrão (`hello`, `menu`). Altere aqui para criar novos comandos em tempo real.
 - `src/logger.ts`: utilitário de logs coloridos com mascaramento de JIDs.
+- `src/conversation/manager.ts`: máquina de estados do atendimento (placa → km → opções), com textos configuráveis.
 - `src/whatsapp.ts`: criação/configuração do socket Baileys e helpers de sessão.
+- `src/utils/`: funções utilitárias (`jid` e `format`) usadas em diversos pontos.
 - `src/send.ts`: script CLI para envio manual de mensagens pela mesma sessão.
 
 ## Fluxo de uso
@@ -59,7 +65,10 @@ O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT
 1. Rode `npm run dev`.
 2. Escaneie o QR Code impresso no terminal (WhatsApp → Aparelhos conectados).
 3. Espere o log `✅ Bot conectado`. Um auto-teste envia mensagem para o próprio número configurado.
-4. Digite `menu` ou `hello` para testar. Ajuste suas respostas em `src/feature-definitions.ts` e salve; o bot recarrega a funcionalidade instantaneamente.
+4. O fluxo padrão solicitará a placa do veículo, depois a quilometragem atual (apenas números) e só então apresentará as opções:
+   - `1` para atendimento urgente (resposta com telefone direto);
+   - `2` para agendamento de manutenção preventiva (link de agendamento).
+   As informações ficam salvas para novos atendimentos; envie `reiniciar` para cadastrar outra placa.
 
 ## Manutenção e cuidados
 

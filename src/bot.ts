@@ -13,7 +13,7 @@ import {
   type ConversationConfig
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
-import { DEFAULT_GROUP_NAME } from './shared/contants/settings.js'
+import { DEFAULT_GROUP_NAME, DEFAULT_LOG_GROUP_NAME } from './shared/contants/settings.js'
 import { BOT_LOG_MESSAGES } from './shared/contants/messages.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
@@ -43,7 +43,9 @@ export class Bot {
   private readonly conversationManager: ConversationManager
   private readonly groupNameCache = new Map<string, string>()
   private readonly sentMessageIds = new Set<string>()
-  private readonly allowedGroupName = DEFAULT_GROUP_NAME.toLowerCase()
+  private allowedGroupName = DEFAULT_GROUP_NAME.toLowerCase()
+  private allowedGroupJid?: string
+  private logGroupJid?: string
 
   constructor(
     private readonly options: BotOptions = {},
@@ -113,6 +115,7 @@ export class Bot {
           this.options.hooks?.onConnectionOpen?.(me)
           await this.runHealthCheck(sock, me)
         }
+        await this.ensureManagedGroups()
         this.conversationManager.clearAll()
         await this.notifyStartup()
         await this.greetDefaultRecipient()
@@ -163,6 +166,70 @@ export class Bot {
       if (!message?.message) return
       await this.handleIncomingMessage(message)
     })
+  }
+
+  private async ensureManagedGroups(): Promise<void> {
+    const sock = this.sock
+    if (!sock) return
+
+    type GroupMetadataLite = { id: string; subject?: string }
+    const desiredGroups: Array<{
+      name: string
+      onResolved: (metadata: GroupMetadataLite, requestedName: string) => void
+    }> = [
+      {
+        name: DEFAULT_GROUP_NAME,
+        onResolved: (metadata, requestedName) => {
+          const subject = (metadata.subject ?? requestedName).trim() || requestedName
+          this.allowedGroupName = subject.toLowerCase()
+          this.allowedGroupJid = metadata.id
+          this.groupNameCache.set(metadata.id, subject)
+        }
+      },
+      {
+        name: DEFAULT_LOG_GROUP_NAME,
+        onResolved: (metadata, requestedName) => {
+          const subject = (metadata.subject ?? requestedName).trim() || requestedName
+          this.logGroupJid = metadata.id
+          this.groupNameCache.set(metadata.id, subject)
+        }
+      }
+    ]
+
+    let allGroups: Record<string, GroupMetadataLite> | undefined
+    try {
+      allGroups = await sock.groupFetchAllParticipating?.()
+    } catch (err) {
+      log.warn(
+        'Não foi possível listar os grupos atuais:',
+        (err as Error)?.message ?? err
+      )
+    }
+
+    const findExistingByName = (name: string): GroupMetadataLite | undefined => {
+      const normalized = name.trim().toLowerCase()
+      const groups = allGroups ? Object.values(allGroups) : []
+      return groups.find((group) => (group.subject ?? '').trim().toLowerCase() === normalized)
+    }
+
+    for (const { name, onResolved } of desiredGroups) {
+      const existing = findExistingByName(name)
+      if (existing) {
+        onResolved(existing, name)
+        continue
+      }
+
+      try {
+        const created = await sock.groupCreate(name, [])
+        onResolved(created, name)
+        log.info(`Grupo "${name}" criado com sucesso: ${maskJid(created.id)}`)
+      } catch (err) {
+        log.err(
+          `Falha ao criar o grupo "${name}":`,
+          (err as Error)?.message ?? err
+        )
+      }
+    }
   }
 
   private async runHealthCheck(sock: WASocket, jid: string): Promise<void> {
@@ -271,7 +338,11 @@ export class Bot {
   }
 
   private getLogRecipient(): string | undefined {
-    return this.options.logRecipientJid ?? this.options.autoTestJid
+    return (
+      this.options.logRecipientJid ??
+      this.logGroupJid ??
+      this.options.autoTestJid
+    )
   }
 
   private buildOutgoingLogPayload(to: string, text: string): string {
@@ -350,6 +421,10 @@ export class Bot {
   private async isAllowedChat(jid: string): Promise<boolean> {
     if (!jid.endsWith('@g.us')) {
       return false
+    }
+
+    if (this.allowedGroupJid) {
+      return jid === this.allowedGroupJid
     }
 
     const groupName = await this.getGroupName(jid)

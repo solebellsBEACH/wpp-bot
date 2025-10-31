@@ -66,7 +66,7 @@ Os textos e opções do atendimento automatizado ficam concentrados em `src/conv
 1. Rode `npm run dev`.
 2. Escaneie o QR Code impresso no terminal (WhatsApp → Aparelhos conectados).
 3. Espere o log `✅ Bot conectado`. Um auto-teste envia mensagem para o próprio número configurado.
-4. Assim que conecta, o bot envia apenas `confiaVeiculos` no grupo “Vazio” (ou no JID configurado) e zera qualquer estado de conversa anterior. A partir daí:
+4. Assim que conecta, o bot envia apenas `confiaVeiculos` no grupo “WppBot” (ou no JID configurado) e zera qualquer estado de conversa anterior. A partir daí:
    - Digite `1` para receber os telefones fictícios de atendimento urgente;
    - Digite `2` para iniciar o fluxo de manutenção preventiva (o bot pedirá placa e, depois, quilometragem);
    - Após qualquer atendimento, responda `SIM` para voltar ao menu ou `NÃO` para encerrar;

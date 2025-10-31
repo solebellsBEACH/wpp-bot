@@ -9,5 +9,5 @@ export const DEFAULT_PRIMARY_NUMBER = normalizeNumber(rawPrimaryNumber)
 export const DEFAULT_PRIMARY_JID = `${DEFAULT_PRIMARY_NUMBER}@s.whatsapp.net`
 
 export const DEFAULT_GROUP_NAME =
-  (process.env.BOT_GROUP_NAME ?? 'Vazio').trim() || 'Vazio'
+  (process.env.BOT_GROUP_NAME ?? 'WppBot').trim() || 'WppBot'
 

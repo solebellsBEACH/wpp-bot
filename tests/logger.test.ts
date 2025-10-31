@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { maskJid } from '../src/logger.js'
-import { DEFAULT_PRIMARY_JID } from '../src/settings.js'
+import { DEFAULT_PRIMARY_JID } from '../src/shared/contants/settings.js'
 
 describe('maskJid', () => {
   it('masks numeric JIDs with default length', () => {

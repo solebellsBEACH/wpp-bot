@@ -1,5 +1,6 @@
 import { normalizeJid } from '../utils/jid.js'
 import { formatKilometers } from '../utils/format.js'
+import { CONVERSATION_ERROR_MESSAGES } from '../shared/contants/messages.js'
 
 const PLATE_REGEX = /^[A-Z0-9]{6,8}$/
 const PLATE_CANDIDATE_REGEX = /[A-Z0-9]{6,8}/
@@ -304,7 +305,7 @@ export class ConversationManager {
     try {
       await this.options.sendText(jid, text, options)
     } catch (err) {
-      this.options.logger?.error?.('Falha ao enviar mensagem de conversa', err)
+      this.options.logger?.error?.(CONVERSATION_ERROR_MESSAGES.sendFailure, err)
     }
   }
 }

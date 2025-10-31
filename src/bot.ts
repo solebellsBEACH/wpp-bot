@@ -7,13 +7,14 @@ import {
   type MessageContext
 } from './features.js'
 import { log, maskJid } from './logger.js'
-import { createSocket, type CreateSocketOptions } from './whatsapp.js'
+import { createSocket, type CreateSocketOptions } from './whatsapp/index.js'
 import {
   ConversationManager,
   type ConversationConfig
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
-import { DEFAULT_GROUP_NAME } from './settings.js'
+import { DEFAULT_GROUP_NAME } from './shared/contants/settings.js'
+import { BOT_LOG_MESSAGES } from './shared/contants/messages.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'
@@ -131,7 +132,7 @@ export class Bot {
         this.sock = undefined
         setTimeout(() => {
           void this.start().catch((err) => {
-            log.err('Falha ao reiniciar conexão:', (err as Error)?.message ?? err)
+            log.err(BOT_LOG_MESSAGES.restartFailure, (err as Error)?.message ?? err)
           })
         }, this.nextBackoff())
       }
@@ -144,12 +145,12 @@ export class Bot {
         if (!jid || !errorName) continue
 
         if (errorName === 'SessionError' || errorName === 'PreKeyError') {
-          log.warn(`Recriando sessão com ${maskJid(jid)} após ${errorName}`)
+          log.warn(`${BOT_LOG_MESSAGES.reconnectingSession} ${maskJid(jid)} após ${errorName}`)
           try {
             await sock.assertSessions([jid])
           } catch (err) {
             log.err(
-              `Falha ao recriar sessão com ${maskJid(jid)}:`,
+              `${BOT_LOG_MESSAGES.failingReconnectSession} ${maskJid(jid)}:`,
               (err as Error)?.message ?? err
             )
           }
@@ -169,7 +170,7 @@ export class Bot {
       await sock.assertSessions([jid])
       await this.sendText(jid, AUTO_TEST_MESSAGE, { forwardToLog: false })
     } catch (err) {
-      log.err('Falha auto-teste:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.autoTestFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -180,7 +181,7 @@ export class Bot {
     try {
       await this.sendText(recipient, STARTUP_LOG_MESSAGE, { forwardToLog: false })
     } catch (err) {
-      log.err('Falha ao notificar início:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.notifyStartupFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -312,7 +313,7 @@ export class Bot {
     try {
       await this.sendRaw(logRecipient, summary)
     } catch (err) {
-      log.err('Falha ao enviar log de envio:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.sendLogFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -333,10 +334,7 @@ export class Bot {
     try {
       await this.sendText(recipient, payload, { forwardToLog: false })
     } catch (err) {
-      log.err(
-        'Falha ao encaminhar log para destinatário padrão:',
-        (err as Error)?.message ?? err
-      )
+      log.err(BOT_LOG_MESSAGES.forwardLogFailure, (err as Error)?.message ?? err)
     }
   }
 

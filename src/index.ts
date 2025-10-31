@@ -1,6 +1,6 @@
 import { Bot } from './bot.js'
 import { FeatureLoader } from './feature-loader.js'
-import { DEFAULT_PRIMARY_JID } from './settings.js'
+import { DEFAULT_PRIMARY_JID } from './shared/contants/settings.js'
 
 const DEFAULT_LOG_JID =
   process.env.BOT_LOG_JID ??

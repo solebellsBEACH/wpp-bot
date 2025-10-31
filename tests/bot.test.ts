@@ -13,13 +13,13 @@ vi.mock('../src/conversation/manager.js', () => ({
 
 const createSocketMock = vi.fn()
 
-vi.mock('../src/whatsapp.js', () => ({
+vi.mock('../src/whatsapp/index.js', () => ({
   createSocket: (...args: unknown[]) => createSocketMock(...args)
 }))
 
 import { Bot } from '../src/bot.js'
 import { FeatureRegistry } from '../src/features.js'
-import { DEFAULT_GROUP_NAME } from '../src/settings.js'
+import { DEFAULT_GROUP_NAME } from '../src/shared/contants/settings.js'
 
 interface MockSocket {
   ev: {

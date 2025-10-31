@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { closeSocket, waitForConnectionOpen } from '../src/whatsapp.js'
+import { closeSocket, waitForConnectionOpen } from '../src/whatsapp/index.js'
 
 describe('waitForConnectionOpen', () => {
   it('resolves immediately when websocket is already open', async () => {

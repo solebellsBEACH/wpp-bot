@@ -1,8 +1,9 @@
 import qrcode from 'qrcode-terminal'
 import { log } from './logger.js'
 import { closeSocket, createSocket, waitForConnectionOpen } from './whatsapp.js'
+import { DEFAULT_PRIMARY_JID } from './settings.js'
 
-const DEFAULT_RECIPIENT = '5527995260672@s.whatsapp.net'
+const DEFAULT_RECIPIENT = DEFAULT_PRIMARY_JID
 const DEFAULT_LOG_RECIPIENT =
   process.env.BOT_LOG_JID ?? process.env.BOT_TEST_JID ?? DEFAULT_RECIPIENT
 const DEFAULT_MESSAGE = '👋 Teste manual!'

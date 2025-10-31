@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { maskJid } from '../src/logger.js'
+import { DEFAULT_PRIMARY_JID } from '../src/settings.js'
 
 describe('maskJid', () => {
   it('masks numeric JIDs with default length', () => {
-    expect(maskJid('5527995260672@s.whatsapp.net')).toBe('552****72@s.whatsapp.net')
+    const [number] = DEFAULT_PRIMARY_JID.split('@')
+    const expected = `${number.slice(0, 3)}****${number.slice(-2)}@s.whatsapp.net`
+    expect(maskJid(DEFAULT_PRIMARY_JID)).toBe(expected)
   })
 
   it('returns original JID when local part is too short', () => {

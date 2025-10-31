@@ -46,7 +46,7 @@ O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT
 
 ### Personalizando o fluxo de atendimento
 
-Os textos e opções do atendimento automatizado ficam concentrados em `src/conversation/manager.ts`. Ajuste o `DEFAULT_CONFIG` ou injete um `conversationConfig` ao instanciar o `Bot` para adaptar mensagens, URLs e contatos sem mexer na lógica da máquina de estados.
+Os textos e opções do atendimento automatizado ficam concentrados em `src/conversation/manager.ts`. Ajuste o `DEFAULT_CONFIG` ou injete um `conversationConfig` ao instanciar o `Bot` para adaptar mensagens (ex.: `initialMessage`, `askPlate`, `urgentPhones`), URLs e contatos sem mexer na lógica da máquina de estados.
 
 ## Estrutura do projeto
 
@@ -59,16 +59,37 @@ Os textos e opções do atendimento automatizado ficam concentrados em `src/conv
 - `src/whatsapp.ts`: criação/configuração do socket Baileys e helpers de sessão.
 - `src/utils/`: funções utilitárias (`jid` e `format`) usadas em diversos pontos.
 - `src/send.ts`: script CLI para envio manual de mensagens pela mesma sessão.
+- `src/main.ts`: expõe `onReceberMensagem`, útil para simular o fluxo de conversa programaticamente.
 
 ## Fluxo de uso
 
 1. Rode `npm run dev`.
 2. Escaneie o QR Code impresso no terminal (WhatsApp → Aparelhos conectados).
 3. Espere o log `✅ Bot conectado`. Um auto-teste envia mensagem para o próprio número configurado.
-4. O fluxo padrão solicitará a placa do veículo, depois a quilometragem atual (apenas números) e só então apresentará as opções:
-   - `1` para atendimento urgente (resposta com telefone direto);
-   - `2` para agendamento de manutenção preventiva (link de agendamento).
-   As informações ficam salvas para novos atendimentos; envie `reiniciar` para cadastrar outra placa.
+4. Assim que conecta, o bot envia apenas `confiaVeiculos` no grupo “Vazio” (ou no JID configurado) e zera qualquer estado de conversa anterior. A partir daí:
+   - Digite `1` para receber os telefones fictícios de atendimento urgente;
+   - Digite `2` para iniciar o fluxo de manutenção preventiva (o bot pedirá placa e, depois, quilometragem);
+   - Após qualquer atendimento, responda `SIM` para voltar ao menu ou `NÃO` para encerrar;
+   - Envie `reiniciar` para recomeçar imediatamente.
+
+### Depurando sem conectar ao WhatsApp
+
+Use `onReceberMensagem` para testar o atendimento diretamente no código:
+
+```ts
+import { onReceberMensagem } from './src/main.js'
+
+await onReceberMensagem('2')
+// => ['Por favor, informe a placa do veículo (ex: ABC1D23).']
+
+await onReceberMensagem(['ABC1D23', '45000'])
+// => ['Agora, informe a quilometragem atual...', 'Perfeito! Registramos o veículo ABC1D23...', 'Deseja continuar o atendimento?...']
+
+await onReceberMensagem('sim')
+// => ['Como podemos ajudar hoje? ...']
+```
+
+O estado da conversa é mantido entre chamadas para o mesmo JID (por padrão `debug@s.whatsapp.net`).
 
 ## Manutenção e cuidados
 

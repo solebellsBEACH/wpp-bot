@@ -19,6 +19,7 @@ vi.mock('../src/whatsapp.js', () => ({
 
 import { Bot } from '../src/bot.js'
 import { FeatureRegistry } from '../src/features.js'
+import { DEFAULT_GROUP_NAME } from '../src/settings.js'
 
 interface MockSocket {
   ev: {
@@ -30,6 +31,7 @@ interface MockSocket {
   ws: { readyState?: number }
   waitForConnectionUpdate?: ReturnType<typeof vi.fn>
   user?: { id?: string }
+  groupMetadata: ReturnType<typeof vi.fn>
 }
 
 const createMockSocket = (): MockSocket & { emit: (event: string, payload: any) => void } => {
@@ -43,9 +45,10 @@ const createMockSocket = (): MockSocket & { emit: (event: string, payload: any) 
         emitter.off(event, handler)
       }
     },
-    sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessage: vi.fn().mockResolvedValue({ key: { id: Math.random().toString(36).slice(2) } }),
     assertSessions: vi.fn().mockResolvedValue(undefined),
     ws: {},
+    groupMetadata: vi.fn().mockResolvedValue({ subject: DEFAULT_GROUP_NAME }),
     emit: (event, payload) => {
       emitter.emit(event, payload)
     }
@@ -90,8 +93,9 @@ describe('Bot', () => {
     const bot = new Bot({ logRecipientJid: undefined }, registry)
     await bot.start()
 
+    const groupJid = '5511999999999-123@g.us'
     const message = {
-      key: { remoteJid: '5511999999999@s.whatsapp.net' },
+      key: { remoteJid: groupJid },
       message: { conversation: 'ping' },
       pushName: 'Tester'
     }
@@ -103,13 +107,13 @@ describe('Bot', () => {
 
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: '5511999999999@s.whatsapp.net',
+        from: groupJid,
         text: 'ping',
         name: 'Tester'
       })
     )
     expect(sock.sendMessage).toHaveBeenCalledWith(
-      '5511999999999@s.whatsapp.net',
+      groupJid,
       { text: 'pong' },
       expect.any(Object)
     )

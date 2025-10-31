@@ -13,6 +13,7 @@ import {
   type ConversationConfig
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
+import { DEFAULT_GROUP_NAME } from './settings.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'
@@ -39,6 +40,9 @@ export class Bot {
   private startPromise?: Promise<WASocket>
   private retries = 0
   private readonly conversationManager: ConversationManager
+  private readonly groupNameCache = new Map<string, string>()
+  private readonly sentMessageIds = new Set<string>()
+  private readonly allowedGroupName = DEFAULT_GROUP_NAME.toLowerCase()
 
   constructor(
     private readonly options: BotOptions = {},
@@ -108,6 +112,7 @@ export class Bot {
           this.options.hooks?.onConnectionOpen?.(me)
           await this.runHealthCheck(sock, me)
         }
+        this.conversationManager.clearAll()
         await this.notifyStartup()
         await this.greetDefaultRecipient()
       }
@@ -180,10 +185,8 @@ export class Bot {
   }
 
   private async greetDefaultRecipient(): Promise<void> {
-    const recipient = this.getLogRecipient()
-    if (!recipient) return
-
-    await this.conversationManager.startConversation(recipient)
+    // Conversa começa somente após receber o gatilho "confiaVeiculos".
+    return
   }
 
   private showQrCode(qr: string): void {
@@ -198,13 +201,24 @@ export class Bot {
     const name = message.pushName ?? undefined
 
     if (!from || !text) return
+    if (!(await this.isAllowedChat(from))) {
+      return
+    }
 
-    if (message.key?.fromMe) {
+    const isFromMe = Boolean(message.key?.fromMe)
+    const messageId = message.key?.id
+    if (isFromMe && messageId && this.sentMessageIds.has(messageId)) {
+      this.sentMessageIds.delete(messageId)
       log.msgOut(from, text)
       return
     }
 
     log.msgIn(from, name, text)
+
+    if (isFromMe) {
+      // Mensagens enviadas manualmente pelo mesmo número devem continuar o fluxo
+    }
+
     await this.forwardLogMessage(from, name, text)
 
     if (await this.conversationManager.handleMessage(from, text)) {
@@ -269,7 +283,13 @@ export class Bot {
 
     const target = normalizeJid(to)
 
-    await sock.sendMessage(target, { text }, { forceNewSession: true } as any)
+    const result = (await sock.sendMessage(target, { text }, { forceNewSession: true } as any)) as
+      | proto.WebMessageInfo
+      | undefined
+    const messageId = result?.key?.id
+    if (messageId) {
+      this.sentMessageIds.add(messageId)
+    }
     log.msgOut(to, text)
   }
 
@@ -327,6 +347,34 @@ export class Bot {
       message.message?.ephemeralMessage?.message?.conversation ??
       ''
     ).trim()
+  }
+
+  private async isAllowedChat(jid: string): Promise<boolean> {
+    if (!jid.endsWith('@g.us')) {
+      return false
+    }
+
+    const groupName = await this.getGroupName(jid)
+    return groupName?.trim().toLowerCase() === this.allowedGroupName
+  }
+
+  private async getGroupName(jid: string): Promise<string | undefined> {
+    const cached = this.groupNameCache.get(jid)
+    if (cached) return cached
+    const sock = this.sock
+    if (!sock) return undefined
+
+    try {
+      const metadata = await sock.groupMetadata(jid)
+      const name = metadata?.subject
+      if (name) {
+        this.groupNameCache.set(jid, name)
+      }
+      return name
+    } catch (err) {
+      log.warn(`Não foi possível obter o nome do grupo ${maskJid(jid)}:`, (err as Error)?.message ?? err)
+      return undefined
+    }
   }
 
   private nextBackoff(): number {

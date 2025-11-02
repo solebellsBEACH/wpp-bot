@@ -1,84 +1,149 @@
-# wpp-bot
+Aqui está um **README.md** completo e profissional para o seu PR do repositório do **bot do WhatsApp (Confia Veículos)** — escrito no formato ideal para GitHub, com seções claras e diretas.
 
-Bot para WhatsApp baseado no [`@whiskeysockets/baileys`](https://github.com/WhiskeySockets/Baileys), escrito em TypeScript e com arquitetura modular para adicionar/remover funcionalidades em tempo real.
+---
 
-## Requisitos
+```markdown
+# 🤖 WhatsApp Bot - Confia Veículos
 
-- Node.js 18 ou superior (ESM nativo e `fetch`)
-- Conta WhatsApp válida (número real que fará o pareamento)
-- Dependências instaladas com `npm install`
+Este projeto implementa um bot de atendimento automatizado via **WhatsApp**, desenvolvido em **TypeScript** com a biblioteca [`@whiskeysockets/baileys`](https://github.com/WhiskeySockets/Baileys).  
+O bot foi criado para a empresa **Confia Veículos**, com o objetivo de automatizar o fluxo de **atendimento urgente** e **manutenção preventiva** de veículos.
 
-As credenciais da sessão ficam no diretório `auth_info/`. Preserve essa pasta após o primeiro pareamento.
+---
 
-## Comandos principais
+## 🧠 Fluxo de Conversa
 
-```bash
-# instalar dependências
-npm install
-
-# desenvolvimento: recarrega automaticamente (watch) e mantém a sessão ativa
-npm run dev
-
-# build para produção na pasta dist/
-npm run build
-
-# executar build compilado
-npm start
-
-# envio manual de mensagem (usa mesma sessão do bot)
-npm run send -- <numero-ou-jid> "mensagem a enviar"
+### 1️⃣ Menu Inicial
 ```
 
-### Reload sem reiniciar o processo
+👋 Olá! Somos a Confia Veículos.
+Como podemos ajudar hoje?
+1 - Atendimento urgente
+2 - Manutenção preventiva
+Responda com 1 para urgência ou 2 para manutenção.
 
-As funcionalidades do bot moram em `src/feature-definitions.ts`. Sempre que você alterar esse arquivo enquanto o `npm run dev` estiver rodando:
+```
 
-1. O watcher do arquivo dispara um reload dinâmico (sem reiniciar o processo nem perder a sessão).
-2. As entradas mudadas são removidas/adicionadas automaticamente no registro de funcionalidades.
+### 2️⃣ Atendimento Urgente
+```
 
-Isso permite iterar em respostas, menus e fluxos sem precisar “renderizar” novamente ou refazer o pareamento com o WhatsApp.
+🚨 Atendimento urgente acionado!
+Escolha um dos nossos canais imediatos:
 
-Alterações em outros arquivos TypeScript provocam restart automático do processo via `tsx watch`.
+1. (27) 4002-8922
+2. (27) 98888-1234
+   Nossa equipe está a postos para te ajudar.
+   Também podemos continuar por aqui.
 
-### Logs automáticos para número padrão
+```
 
-O bot encaminha cada mensagem recebida **e enviada** para o JID definido em `BOT_LOG_JID` (ou, caso ausente, utiliza `BOT_TEST_JID` e finalmente `5527995260672@s.whatsapp.net`). Ao iniciar, ele também dispara `STARTUP_LOG_MESSAGE` para o mesmo destinatário. O log inclui remetente/destino mascarados, nome (quando disponível) e o conteúdo envolvido.
+### 3️⃣ Manutenção Preventiva
+```
 
-### Personalizando o fluxo de atendimento
+Por favor, informe a placa do veículo (ex: ABC1D23).
 
-Os textos e opções do atendimento automatizado ficam concentrados em `src/conversation/manager.ts`. Ajuste o `DEFAULT_CONFIG` ou injete um `conversationConfig` ao instanciar o `Bot` para adaptar mensagens, URLs e contatos sem mexer na lógica da máquina de estados.
+```
+Depois:
+```
 
-## Estrutura do projeto
+Agora, informe a quilometragem atual do veículo (apenas números).
 
-- `src/bot.ts`: classe `Bot`, responsável por conexão, QR Code, backoff e dispatch das funcionalidades.
-- `src/features.ts`: registro (`FeatureRegistry`) com métodos `set`, `get`, `delete` e o contexto de mensagens.
-- `src/feature-loader.ts`: orquestra o carregamento e o hot reload das funcionalidades.
-- `src/feature-definitions.ts`: funcionalidades padrão (`hello`, `menu`). Altere aqui para criar novos comandos em tempo real.
-- `src/logger.ts`: utilitário de logs coloridos com mascaramento de JIDs.
-- `src/conversation/manager.ts`: máquina de estados do atendimento (placa → km → opções), com textos configuráveis.
-- `src/whatsapp.ts`: criação/configuração do socket Baileys e helpers de sessão.
-- `src/utils/`: funções utilitárias (`jid` e `format`) usadas em diversos pontos.
-- `src/send.ts`: script CLI para envio manual de mensagens pela mesma sessão.
+```
+E por fim:
+```
 
-## Fluxo de uso
+Perfeito! Registramos o veículo ABC1D23 com 272.727 km.
+Em breve entraremos em contato para agendar sua manutenção preventiva.
 
-1. Rode `npm run dev`.
-2. Escaneie o QR Code impresso no terminal (WhatsApp → Aparelhos conectados).
-3. Espere o log `✅ Bot conectado`. Um auto-teste envia mensagem para o próprio número configurado.
-4. O fluxo padrão solicitará a placa do veículo, depois a quilometragem atual (apenas números) e só então apresentará as opções:
-   - `1` para atendimento urgente (resposta com telefone direto);
-   - `2` para agendamento de manutenção preventiva (link de agendamento).
-   As informações ficam salvas para novos atendimentos; envie `reiniciar` para cadastrar outra placa.
+````
 
-## Manutenção e cuidados
+---
 
-- **backup de sessão:** mantenha `auth_info/` fora do versionamento (`.gitignore`) e não compartilhe.
-- **reautorização:** se o QR parar de aparecer ou a sessão expirar, delete `auth_info/` com o bot parado e pareie novamente.
-- **atualização do Baileys:** execute `npm install @whiskeysockets/baileys@latest` (verifique breaking changes).
-- **logs:** todos os eventos são exibidos no terminal com horários e números mascarados.
+## 🏗️ Tecnologias Utilizadas
 
-## Troubleshooting
+- **TypeScript**
+- **Node.js**
+- **Baileys** (`@whiskeysockets/baileys`)
+- **Pino** (para logs)
+- **QRCode Terminal** (para autenticação via QR)
+- **Vitest** (para testes)
 
-- **`tsc: not found`** – instale as dependências (`npm install`) antes de `npm run build`.
-- **Sessão desconectada (`loggedOut`)** – remova `auth_info/` e refaça o pareamento.
-- **Mensagens não chegam** – confirme DDI/DDD do número, conectividade do aparelho e permissões do WhatsApp.
+---
+
+## 📦 Instalação e Execução
+
+```bash
+# Clone o repositório
+git clone https://github.com/seuusuario/wpp-bot.git
+cd wpp-bot
+
+# Instale as dependências
+npm install
+
+# Execute em modo de desenvolvimento
+npm run dev
+
+# Ou construa e inicie a versão de produção
+npm run build
+npm start
+````
+
+Ao rodar pela primeira vez, será exibido um **QR Code no terminal**.
+Escaneie-o com o WhatsApp vinculado à conta da empresa.
+
+---
+
+## 🧩 Scripts Disponíveis
+
+| Script          | Descrição                                            |
+| --------------- | ---------------------------------------------------- |
+| `npm run dev`   | Inicia o bot em modo desenvolvimento com `tsx watch` |
+| `npm run build` | Compila o TypeScript para a pasta `dist`             |
+| `npm start`     | Executa o bot em produção                            |
+| `npm run send`  | Envia mensagens de teste via script                  |
+| `npm test`      | Roda os testes com `vitest`                          |
+
+---
+
+## 🧾 Estrutura do Projeto
+
+```
+wpp-bot/
+├── src/
+│   ├── index.ts        # Ponto de entrada principal do bot
+│   ├── send.ts         # Script auxiliar para envio de mensagens
+│   └── utils/          # Funções auxiliares (futuras melhorias)
+├── dist/               # Código compilado (build)
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 🚀 Próximos Passos
+
+* [ ] Adicionar persistência de dados (SQLite ou PostgreSQL)
+* [ ] Criar painel de logs / histórico de atendimentos
+* [ ] Implementar integração com API de backend (Node/Fastify)
+* [ ] Publicar em servidor (Render, Railway ou VPS)
+
+---
+
+## 👨‍💻 Autor
+
+**Lucas Xavier**
+Fullstack Engineer — [GitHub](https://github.com/solebellsBEACH) · [LinkedIn](https://linkedin.com/in/lucassxxavier)
+
+---
+
+## 🛡️ Licença
+
+Este projeto está sob a licença **MIT** — sinta-se à vontade para usar e adaptar.
+
+```
+
+---
+
+Deseja que eu adapte o README para formato de **Pull Request (PR)** — ou seja, com um resumo no topo tipo _“Este PR adiciona o fluxo de atendimento via WhatsApp para urgência e manutenção preventiva”_ e checklist de mudanças?  
+Posso gerar essa versão em seguida, ideal para descrever a feature na aba *Pull Requests* do GitHub.
+```

@@ -7,12 +7,14 @@ import {
   type MessageContext
 } from './features.js'
 import { log, maskJid } from './logger.js'
-import { createSocket, type CreateSocketOptions } from './whatsapp.js'
+import { createSocket, type CreateSocketOptions } from './whatsapp/index.js'
 import {
   ConversationManager,
   type ConversationConfig
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
+import { DEFAULT_GROUP_NAME, DEFAULT_LOG_GROUP_NAME } from './shared/contants/settings.js'
+import { BOT_LOG_MESSAGES, GROUP_START_MESSAGES } from './shared/contants/messages.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'
@@ -39,6 +41,11 @@ export class Bot {
   private startPromise?: Promise<WASocket>
   private retries = 0
   private readonly conversationManager: ConversationManager
+  private readonly groupNameCache = new Map<string, string>()
+  private readonly sentMessageIds = new Set<string>()
+  private allowedGroupName = DEFAULT_GROUP_NAME.toLowerCase()
+  private allowedGroupJid?: string
+  private logGroupJid?: string
 
   constructor(
     private readonly options: BotOptions = {},
@@ -108,6 +115,8 @@ export class Bot {
           this.options.hooks?.onConnectionOpen?.(me)
           await this.runHealthCheck(sock, me)
         }
+        await this.ensureManagedGroups()
+        this.conversationManager.clearAll()
         await this.notifyStartup()
         await this.greetDefaultRecipient()
       }
@@ -126,7 +135,7 @@ export class Bot {
         this.sock = undefined
         setTimeout(() => {
           void this.start().catch((err) => {
-            log.err('Falha ao reiniciar conexão:', (err as Error)?.message ?? err)
+            log.err(BOT_LOG_MESSAGES.restartFailure, (err as Error)?.message ?? err)
           })
         }, this.nextBackoff())
       }
@@ -139,12 +148,12 @@ export class Bot {
         if (!jid || !errorName) continue
 
         if (errorName === 'SessionError' || errorName === 'PreKeyError') {
-          log.warn(`Recriando sessão com ${maskJid(jid)} após ${errorName}`)
+          log.warn(`${BOT_LOG_MESSAGES.reconnectingSession} ${maskJid(jid)} após ${errorName}`)
           try {
             await sock.assertSessions([jid])
           } catch (err) {
             log.err(
-              `Falha ao recriar sessão com ${maskJid(jid)}:`,
+              `${BOT_LOG_MESSAGES.failingReconnectSession} ${maskJid(jid)}:`,
               (err as Error)?.message ?? err
             )
           }
@@ -159,12 +168,92 @@ export class Bot {
     })
   }
 
+  private async ensureManagedGroups(): Promise<void> {
+    const sock = this.sock
+    if (!sock) return
+
+    type GroupMetadataLite = { id: string; subject?: string }
+    const createdGroups: Array<{ jid: string; message: string }> = []
+    const desiredGroups: Array<{
+      name: string
+      onResolved: (metadata: GroupMetadataLite, requestedName: string) => void
+      getWelcomeMessage?: () => string
+    }> = [
+      {
+        name: DEFAULT_GROUP_NAME,
+        onResolved: (metadata, requestedName) => {
+          const subject = (metadata.subject ?? requestedName).trim() || requestedName
+          this.allowedGroupName = subject.toLowerCase()
+          this.allowedGroupJid = metadata.id
+          this.groupNameCache.set(metadata.id, subject)
+        },
+        getWelcomeMessage: () => GROUP_START_MESSAGES.primary
+      },
+      {
+        name: DEFAULT_LOG_GROUP_NAME,
+        onResolved: (metadata, requestedName) => {
+          const subject = (metadata.subject ?? requestedName).trim() || requestedName
+          this.logGroupJid = metadata.id
+          this.groupNameCache.set(metadata.id, subject)
+        },
+        getWelcomeMessage: () => GROUP_START_MESSAGES.log
+      }
+    ]
+
+    let allGroups: Record<string, GroupMetadataLite> | undefined
+    try {
+      allGroups = await sock.groupFetchAllParticipating?.()
+    } catch (err) {
+      log.warn(
+        'Não foi possível listar os grupos atuais:',
+        (err as Error)?.message ?? err
+      )
+    }
+
+    const findExistingByName = (name: string): GroupMetadataLite | undefined => {
+      const normalized = name.trim().toLowerCase()
+      const groups = allGroups ? Object.values(allGroups) : []
+      return groups.find((group) => (group.subject ?? '').trim().toLowerCase() === normalized)
+    }
+
+    for (const { name, onResolved, getWelcomeMessage } of desiredGroups) {
+      const existing = findExistingByName(name)
+      if (existing) {
+        onResolved(existing, name)
+        continue
+      }
+
+      try {
+        const created = await sock.groupCreate(name, [])
+        onResolved(created, name)
+        log.info(`Grupo "${name}" criado com sucesso: ${maskJid(created.id)}`)
+        const message = getWelcomeMessage?.()
+        if (message) {
+          createdGroups.push({ jid: created.id, message })
+        }
+      } catch (err) {
+        log.err(
+          `Falha ao criar o grupo "${name}":`,
+          (err as Error)?.message ?? err
+        )
+      }
+    }
+
+    for (const { jid, message } of createdGroups) {
+      try {
+        await this.sendText(jid, message, { forwardToLog: false })
+      } catch (err) {
+        log.err(BOT_LOG_MESSAGES.groupWelcomeFailure, (err as Error)?.message ?? err)
+      }
+    }
+  }
+
   private async runHealthCheck(sock: WASocket, jid: string): Promise<void> {
     try {
       await sock.assertSessions([jid])
       await this.sendText(jid, AUTO_TEST_MESSAGE, { forwardToLog: false })
     } catch (err) {
-      log.err('Falha auto-teste:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.autoTestFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -175,15 +264,13 @@ export class Bot {
     try {
       await this.sendText(recipient, STARTUP_LOG_MESSAGE, { forwardToLog: false })
     } catch (err) {
-      log.err('Falha ao notificar início:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.notifyStartupFailure, (err as Error)?.message ?? err)
     }
   }
 
   private async greetDefaultRecipient(): Promise<void> {
-    const recipient = this.getLogRecipient()
-    if (!recipient) return
-
-    await this.conversationManager.startConversation(recipient)
+    // Conversa começa somente após receber o gatilho "confiaVeiculos".
+    return
   }
 
   private showQrCode(qr: string): void {
@@ -198,13 +285,26 @@ export class Bot {
     const name = message.pushName ?? undefined
 
     if (!from || !text) return
+    if (!(await this.isAllowedChat(from))) {
+      return
+    }
 
-    if (message.key?.fromMe) {
+    await this.ensureSession(from)
+
+    const isFromMe = Boolean(message.key?.fromMe)
+    const messageId = message.key?.id
+    if (isFromMe && messageId && this.sentMessageIds.has(messageId)) {
+      this.sentMessageIds.delete(messageId)
       log.msgOut(from, text)
       return
     }
 
     log.msgIn(from, name, text)
+
+    if (isFromMe) {
+      // Mensagens enviadas manualmente pelo mesmo número devem continuar o fluxo
+    }
+
     await this.forwardLogMessage(from, name, text)
 
     if (await this.conversationManager.handleMessage(from, text)) {
@@ -256,11 +356,32 @@ export class Bot {
   }
 
   private getLogRecipient(): string | undefined {
-    return this.options.logRecipientJid ?? this.options.autoTestJid
+    return (
+      this.options.logRecipientJid ??
+      this.logGroupJid ??
+      this.options.autoTestJid
+    )
   }
 
   private buildOutgoingLogPayload(to: string, text: string): string {
     return ['📤 LOG DE ENVIO', `Destino: ${maskJid(to)}`, `Conteúdo: ${text}`].join('\n')
+  }
+
+  private async ensureSession(jid: string): Promise<void> {
+    const sock = this.sock
+    if (!sock) return
+    // Sessões são relevantes apenas para chats diretos; grupos usam sender keys
+    if (jid.endsWith('@g.us') || jid.endsWith('@broadcast')) {
+      return
+    }
+    try {
+      await sock.assertSessions([jid])
+    } catch (err) {
+      log.warn(
+        `Falha ao garantir sessão com ${maskJid(jid)}:`,
+        (err as Error)?.message ?? err
+      )
+    }
   }
 
   private async sendRaw(to: string, text: string): Promise<void> {
@@ -268,8 +389,20 @@ export class Bot {
     if (!sock) throw new Error('WhatsApp socket não está conectado')
 
     const target = normalizeJid(to)
+    const isGroup = target.endsWith('@g.us') || target.endsWith('@broadcast')
 
-    await sock.sendMessage(target, { text }, { forceNewSession: true } as any)
+    if (!isGroup) {
+      await this.ensureSession(target)
+    }
+
+    const sendOptions = isGroup ? undefined : ({ forceNewSession: true } as any)
+    const result = (await sock.sendMessage(target, { text }, sendOptions)) as
+      | proto.WebMessageInfo
+      | undefined
+    const messageId = result?.key?.id
+    if (messageId) {
+      this.sentMessageIds.add(messageId)
+    }
     log.msgOut(to, text)
   }
 
@@ -292,7 +425,7 @@ export class Bot {
     try {
       await this.sendRaw(logRecipient, summary)
     } catch (err) {
-      log.err('Falha ao enviar log de envio:', (err as Error)?.message ?? err)
+      log.err(BOT_LOG_MESSAGES.sendLogFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -313,10 +446,7 @@ export class Bot {
     try {
       await this.sendText(recipient, payload, { forwardToLog: false })
     } catch (err) {
-      log.err(
-        'Falha ao encaminhar log para destinatário padrão:',
-        (err as Error)?.message ?? err
-      )
+      log.err(BOT_LOG_MESSAGES.forwardLogFailure, (err as Error)?.message ?? err)
     }
   }
 
@@ -327,6 +457,38 @@ export class Bot {
       message.message?.ephemeralMessage?.message?.conversation ??
       ''
     ).trim()
+  }
+
+  private async isAllowedChat(jid: string): Promise<boolean> {
+    if (!jid.endsWith('@g.us')) {
+      return false
+    }
+
+    if (this.allowedGroupJid) {
+      return jid === this.allowedGroupJid
+    }
+
+    const groupName = await this.getGroupName(jid)
+    return groupName?.trim().toLowerCase() === this.allowedGroupName
+  }
+
+  private async getGroupName(jid: string): Promise<string | undefined> {
+    const cached = this.groupNameCache.get(jid)
+    if (cached) return cached
+    const sock = this.sock
+    if (!sock) return undefined
+
+    try {
+      const metadata = await sock.groupMetadata(jid)
+      const name = metadata?.subject
+      if (name) {
+        this.groupNameCache.set(jid, name)
+      }
+      return name
+    } catch (err) {
+      log.warn(`Não foi possível obter o nome do grupo ${maskJid(jid)}:`, (err as Error)?.message ?? err)
+      return undefined
+    }
   }
 
   private nextBackoff(): number {

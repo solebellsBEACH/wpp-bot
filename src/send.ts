@@ -1,8 +1,10 @@
 import qrcode from 'qrcode-terminal'
 import { log } from './logger.js'
-import { closeSocket, createSocket, waitForConnectionOpen } from './whatsapp.js'
+import { closeSocket, createSocket, waitForConnectionOpen } from './whatsapp/index.js'
+import { DEFAULT_PRIMARY_JID } from './shared/contants/settings.js'
+import { SEND_MESSAGES } from './shared/contants/messages.js'
 
-const DEFAULT_RECIPIENT = '5527995260672@s.whatsapp.net'
+const DEFAULT_RECIPIENT = DEFAULT_PRIMARY_JID
 const DEFAULT_LOG_RECIPIENT =
   process.env.BOT_LOG_JID ?? process.env.BOT_TEST_JID ?? DEFAULT_RECIPIENT
 const DEFAULT_MESSAGE = '👋 Teste manual!'
@@ -12,7 +14,7 @@ function normalizeRecipient(input?: string): string {
   if (input.includes('@')) return input
   const digits = input.replace(/\D/g, '')
   if (!digits) {
-    throw new Error('Informe um número ou JID válido.')
+    throw new Error(SEND_MESSAGES.invalidRecipient)
   }
   return `${digits}@s.whatsapp.net`
 }
@@ -40,12 +42,12 @@ async function main(): Promise<void> {
     onConnectionUpdate = ({ qr, connection }) => {
       if (qr) {
         console.clear()
-        log.info('Escaneie o QR abaixo para autorizar esta sessão:')
+        log.info(SEND_MESSAGES.scanQrPrompt)
         qrcode.generate(qr, { small: true })
       }
 
       if (connection === 'open') {
-        log.info('Sessão conectada, enviando mensagem...')
+        log.info(SEND_MESSAGES.sessionOpen)
       }
     }
 
@@ -66,11 +68,11 @@ async function main(): Promise<void> {
         await sock.sendMessage(logRecipient, { text: summary }, { forceNewSession: true } as any)
         log.msgOut(logRecipient, summary)
       } catch (error) {
-        log.err('Falha ao enviar log de saída:', (error as Error)?.message ?? error)
+        log.err(SEND_MESSAGES.logSendFailure, (error as Error)?.message ?? error)
       }
     }
   } catch (err) {
-    log.err('Falha ao enviar mensagem:', (err as Error)?.message ?? err)
+    log.err(SEND_MESSAGES.sendFailure, (err as Error)?.message ?? err)
     process.exitCode = 1
   } finally {
     if (sock && onConnectionUpdate) {

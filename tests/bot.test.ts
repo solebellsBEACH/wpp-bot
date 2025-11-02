@@ -115,7 +115,7 @@ describe('Bot', () => {
     expect(sock.sendMessage).toHaveBeenCalledWith(
       groupJid,
       { text: 'pong' },
-      expect.any(Object)
+      undefined
     )
   })
 

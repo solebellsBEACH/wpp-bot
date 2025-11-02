@@ -14,7 +14,7 @@ import {
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
 import { DEFAULT_GROUP_NAME, DEFAULT_LOG_GROUP_NAME } from './shared/contants/settings.js'
-import { BOT_LOG_MESSAGES } from './shared/contants/messages.js'
+import { BOT_LOG_MESSAGES, GROUP_START_MESSAGES } from './shared/contants/messages.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'
@@ -173,9 +173,11 @@ export class Bot {
     if (!sock) return
 
     type GroupMetadataLite = { id: string; subject?: string }
+    const createdGroups: Array<{ jid: string; message: string }> = []
     const desiredGroups: Array<{
       name: string
       onResolved: (metadata: GroupMetadataLite, requestedName: string) => void
+      getWelcomeMessage?: () => string
     }> = [
       {
         name: DEFAULT_GROUP_NAME,
@@ -184,7 +186,8 @@ export class Bot {
           this.allowedGroupName = subject.toLowerCase()
           this.allowedGroupJid = metadata.id
           this.groupNameCache.set(metadata.id, subject)
-        }
+        },
+        getWelcomeMessage: () => GROUP_START_MESSAGES.primary
       },
       {
         name: DEFAULT_LOG_GROUP_NAME,
@@ -192,7 +195,8 @@ export class Bot {
           const subject = (metadata.subject ?? requestedName).trim() || requestedName
           this.logGroupJid = metadata.id
           this.groupNameCache.set(metadata.id, subject)
-        }
+        },
+        getWelcomeMessage: () => GROUP_START_MESSAGES.log
       }
     ]
 
@@ -212,7 +216,7 @@ export class Bot {
       return groups.find((group) => (group.subject ?? '').trim().toLowerCase() === normalized)
     }
 
-    for (const { name, onResolved } of desiredGroups) {
+    for (const { name, onResolved, getWelcomeMessage } of desiredGroups) {
       const existing = findExistingByName(name)
       if (existing) {
         onResolved(existing, name)
@@ -223,11 +227,23 @@ export class Bot {
         const created = await sock.groupCreate(name, [])
         onResolved(created, name)
         log.info(`Grupo "${name}" criado com sucesso: ${maskJid(created.id)}`)
+        const message = getWelcomeMessage?.()
+        if (message) {
+          createdGroups.push({ jid: created.id, message })
+        }
       } catch (err) {
         log.err(
           `Falha ao criar o grupo "${name}":`,
           (err as Error)?.message ?? err
         )
+      }
+    }
+
+    for (const { jid, message } of createdGroups) {
+      try {
+        await this.sendText(jid, message, { forwardToLog: false })
+      } catch (err) {
+        log.err(BOT_LOG_MESSAGES.groupWelcomeFailure, (err as Error)?.message ?? err)
       }
     }
   }
@@ -272,6 +288,8 @@ export class Bot {
     if (!(await this.isAllowedChat(from))) {
       return
     }
+
+    await this.ensureSession(from)
 
     const isFromMe = Boolean(message.key?.fromMe)
     const messageId = message.key?.id
@@ -349,13 +367,36 @@ export class Bot {
     return ['📤 LOG DE ENVIO', `Destino: ${maskJid(to)}`, `Conteúdo: ${text}`].join('\n')
   }
 
+  private async ensureSession(jid: string): Promise<void> {
+    const sock = this.sock
+    if (!sock) return
+    // Sessões são relevantes apenas para chats diretos; grupos usam sender keys
+    if (jid.endsWith('@g.us') || jid.endsWith('@broadcast')) {
+      return
+    }
+    try {
+      await sock.assertSessions([jid])
+    } catch (err) {
+      log.warn(
+        `Falha ao garantir sessão com ${maskJid(jid)}:`,
+        (err as Error)?.message ?? err
+      )
+    }
+  }
+
   private async sendRaw(to: string, text: string): Promise<void> {
     const sock = this.sock
     if (!sock) throw new Error('WhatsApp socket não está conectado')
 
     const target = normalizeJid(to)
+    const isGroup = target.endsWith('@g.us') || target.endsWith('@broadcast')
 
-    const result = (await sock.sendMessage(target, { text }, { forceNewSession: true } as any)) as
+    if (!isGroup) {
+      await this.ensureSession(target)
+    }
+
+    const sendOptions = isGroup ? undefined : ({ forceNewSession: true } as any)
+    const result = (await sock.sendMessage(target, { text }, sendOptions)) as
       | proto.WebMessageInfo
       | undefined
     const messageId = result?.key?.id

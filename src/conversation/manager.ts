@@ -6,6 +6,13 @@ const PLATE_REGEX = /^[A-Z0-9]{6,8}$/
 const PLATE_CANDIDATE_REGEX = /[A-Z0-9]{6,8}/
 const RESET_PATTERN = /^(reiniciar|reset|nova|novo|atualizar)$/i
 
+const normalizeTriggerText = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase()
+
 export type ConversationStep =
   | 'awaitingSelection'
   | 'awaitingPlate'
@@ -294,7 +301,7 @@ export class ConversationManager {
   }
 
   private matchesInitialTrigger(text: string): boolean {
-    return text.trim().toLowerCase() === this.config.initialMessage.toLowerCase()
+    return normalizeTriggerText(text) === normalizeTriggerText(this.config.initialMessage)
   }
 
   private async safeSendText(

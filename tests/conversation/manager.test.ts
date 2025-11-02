@@ -25,6 +25,15 @@ describe('ConversationManager', () => {
     )
   })
 
+  it('accepts trigger with accents, spaces or punctuation', async () => {
+    await manager.handleMessage(JID, 'Confia Veículos!')
+    expect(sendText).toHaveBeenCalledWith(
+      JID,
+      expect.stringContaining('Como podemos ajudar hoje?'),
+      undefined
+    )
+  })
+
   it('handles full flow including validation and options', async () => {
     await manager.handleMessage(JID, 'confiaVeiculos')
     sendText.mockClear()

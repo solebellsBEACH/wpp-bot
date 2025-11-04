@@ -1,4 +1,6 @@
-import { maskJid } from "./utils/jid.js"
+import { maskJid } from './utils/jid.js'
+
+export { maskJid } from './utils/jid.js'
 
 const COLORS = {
   reset: '\x1b[0m',

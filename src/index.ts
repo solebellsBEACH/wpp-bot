@@ -1,4 +1,4 @@
-import { Bot } from './bot.js'
+import { Bot } from './bot/index.js'
 import { FeatureLoader } from './feature-loader.js'
 import { DEFAULT_PRIMARY_JID } from './shared/constants/settings.js'
 

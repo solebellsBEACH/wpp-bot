@@ -17,9 +17,9 @@ vi.mock('../src/whatsapp/index.js', () => ({
   createSocket: (...args: unknown[]) => createSocketMock(...args)
 }))
 
-import { Bot } from '../src/bot.js'
+import { Bot } from '../src/bot/index.js'
 import { FeatureRegistry } from '../src/features.js'
-import { DEFAULT_GROUP_NAME } from '../src/shared/contants/settings.js'
+import { DEFAULT_GROUP_NAME } from '../src/shared/constants/settings.js'
 
 interface MockSocket {
   ev: {

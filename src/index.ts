@@ -1,6 +1,6 @@
 import { Bot } from './bot.js'
 import { FeatureLoader } from './feature-loader.js'
-import { DEFAULT_PRIMARY_JID } from './shared/contants/settings.js'
+import { DEFAULT_PRIMARY_JID } from './shared/constants/settings.js'
 
 const explicitLogJid = process.env.BOT_LOG_JID?.trim()
 const defaultAutoTestJid =

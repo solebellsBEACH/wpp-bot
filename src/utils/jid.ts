@@ -15,3 +15,9 @@ export function normalizeJid(jid: string | undefined | null): string {
   return `${user}@${normalizedDomain}`
 }
 
+export const maskJid = (jid = ''): string => {
+  const [raw, domain] = jid.split('@')
+  if (!raw || !domain) return jid
+  if (!/^\d+$/.test(raw) || raw.length < 7) return jid
+  return `${raw.slice(0, 3)}****${raw.slice(-2)}@${domain}`
+}

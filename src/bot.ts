@@ -13,8 +13,8 @@ import {
   type ConversationConfig
 } from './conversation/manager.js'
 import { normalizeJid } from './utils/jid.js'
-import { DEFAULT_GROUP_NAME, DEFAULT_LOG_GROUP_NAME } from './shared/contants/settings.js'
-import { BOT_LOG_MESSAGES, GROUP_START_MESSAGES } from './shared/contants/messages.js'
+import { DEFAULT_GROUP_NAME, DEFAULT_LOG_GROUP_NAME } from './shared/constants/settings.js'
+import { BOT_LOG_MESSAGES, GROUP_START_MESSAGES } from './shared/constants/messages.js'
 
 const AUTO_TEST_MESSAGE = '✅ Bot online (auto-teste).'
 const STARTUP_LOG_MESSAGE = '🚀 Bot iniciado e pronto para uso.'

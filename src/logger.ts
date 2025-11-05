@@ -1,3 +1,7 @@
+import { maskJid } from './utils/jid.js'
+
+export { maskJid } from './utils/jid.js'
+
 const COLORS = {
   reset: '\x1b[0m',
   dim: '\x1b[2m',
@@ -9,13 +13,6 @@ const COLORS = {
 } as const
 
 const now = () => new Date().toLocaleTimeString('pt-BR', { hour12: false })
-
-export const maskJid = (jid = ''): string => {
-  const [raw, domain] = jid.split('@')
-  if (!raw || !domain) return jid
-  if (!/^\d+$/.test(raw) || raw.length < 7) return jid
-  return `${raw.slice(0, 3)}****${raw.slice(-2)}@${domain}`
-}
 
 export const log = {
   ok: (...args: unknown[]) =>

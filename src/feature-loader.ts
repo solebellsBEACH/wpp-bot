@@ -1,8 +1,8 @@
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { FeatureDefinition } from './features.js'
-import type { Bot } from './bot.js'
-import { FEATURE_LOADER_ERROR_MESSAGES } from './shared/contants/messages.js'
+import type { Bot } from './bot/index.js'
+import { FEATURE_LOADER_ERROR_MESSAGES } from './shared/constants/messages.js'
 
 interface FeatureModule {
   default?: FeatureDefinition[] | (() => FeatureDefinition[] | Promise<FeatureDefinition[]>)

@@ -15,8 +15,6 @@ const DEFAULT_SOCKET_OPTIONS: Partial<SocketConfig> = {
   defaultQueryTimeoutMs: 60_000
 }
 
-
-
 export interface CreateSocketOptions {
   sessionPath?: string
   loggerLevel?: pino.LevelWithSilent

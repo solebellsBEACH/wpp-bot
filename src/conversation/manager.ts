@@ -1,5 +1,5 @@
 import { CONVERSATION_ERROR_MESSAGES } from '../shared/constants/messages.js'
-import { normalizeJid } from '../utils/jid.js'
+import { normalizeJid } from '../shared/utils/jid.js'
 import { DEFAULT_CONFIG } from './config.js'
 import {
   buildMaintenanceConfirmation,
@@ -9,7 +9,6 @@ import {
 } from './messages.js'
 import type {
   ConversationConfig,
-  ConversationData,
   ConversationManagerOptions,
   ConversationState
 } from './types.js'

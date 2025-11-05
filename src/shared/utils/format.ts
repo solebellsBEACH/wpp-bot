@@ -1,5 +1,5 @@
-import { SEND_MESSAGES } from "../shared/constants/messages.js"
-import { DEFAULT_RECIPIENT } from "../shared/constants/settings.js"
+import { SEND_MESSAGES } from "../constants/messages.js"
+import { DEFAULT_RECIPIENT } from "../constants/settings.js"
 
 export function formatKilometers(km?: string): string {
   if (!km) return ''

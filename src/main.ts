@@ -21,8 +21,8 @@ const conversation = new ConversationManager({
   }
 })
 
-const normaliseInputs = (respostas: InputMessage | InputMessage[]): Array<{ jid: string; text: string }> => {
-  const list = Array.isArray(respostas) ? respostas : [respostas]
+const normaliseInputs = (res: InputMessage | InputMessage[]): Array<{ jid: string; text: string }> => {
+  const list = Array.isArray(res) ? res : [res]
   return list.map((item) => {
     if (typeof item === 'string') {
       return { jid: DEBUG_JID, text: item }
@@ -31,8 +31,8 @@ const normaliseInputs = (respostas: InputMessage | InputMessage[]): Array<{ jid:
   })
 }
 
-export async function onReceberMensagem(respostas: InputMessage | InputMessage[]): Promise<string[]> {
-  const messages = normaliseInputs(respostas)
+export async function onReceberMensagem(res: InputMessage | InputMessage[]): Promise<string[]> {
+  const messages = normaliseInputs(res)
   const jid = messages[0]?.jid ?? DEBUG_JID
 
   conversationOutputs.set(jid, [])

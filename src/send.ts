@@ -3,7 +3,7 @@ import { log } from './logger.js'
 import { closeSocket, createSocket, waitForConnectionOpen } from './whatsapp/index.js'
 import { DEFAULT_LOG_RECIPIENT, DEFAULT_MESSAGE } from './shared/constants/settings.js'
 import { SEND_MESSAGES } from './shared/constants/messages.js'
-import { mask, normalizeRecipient } from './utils/format.js'
+import { mask, normalizeRecipient } from './shared/utils/format.js'
 
 type WhatsAppSocket = Awaited<ReturnType<typeof createSocket>>['sock']
 
@@ -90,3 +90,7 @@ function delay(ms: number): Promise<void> {
 }
 
 void main()
+
+
+
+

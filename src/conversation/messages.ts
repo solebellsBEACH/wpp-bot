@@ -1,4 +1,4 @@
-import { formatKilometers } from '../utils/format.js'
+import { formatKilometers } from '../shared/utils/format.js'
 import type { ConversationConfig, ConversationData, ConversationState } from './types.js'
 
 export const buildMenuMessage = (

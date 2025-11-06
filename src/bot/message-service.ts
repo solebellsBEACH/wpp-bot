@@ -1,8 +1,9 @@
 import { type proto, type WASocket } from '@whiskeysockets/baileys'
 
-import { log, maskJid } from '../logger.js'
+import { log } from '../logger.js'
 import { BOT_LOG_MESSAGES } from '../shared/constants/messages.js'
-import { normalizeJid } from '../utils/jid.js'
+import { maskJid, normalizeJid } from '../shared/utils/jid.js'
+
 
 export interface SendTextOptions {
   forwardToLog?: boolean

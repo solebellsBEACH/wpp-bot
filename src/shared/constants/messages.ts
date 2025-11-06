@@ -28,5 +28,6 @@ export const SEND_MESSAGES = {
 export const GROUP_START_MESSAGES = {
   primary:
     '👋 Olá! Este grupo foi criado automaticamente pelo bot Confia Veículos. Envie "confiaVeiculos" quando quiser iniciar o atendimento.',
-  log: '🗒️ Grupo de logs criado automaticamente. Manteremos aqui o histórico das ações e notificações do bot.'
+  log: '🗒️ Grupo de logs criado automaticamente. Manteremos aqui o histórico das ações e notificações do bot.',
+  serviceLog: '🗒️ Grupo para os registros de atendimentos.'
 } as const

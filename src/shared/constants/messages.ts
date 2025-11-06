@@ -4,6 +4,7 @@ export const BOT_LOG_MESSAGES = {
   notifyStartupFailure: 'Falha ao notificar início:',
   sendLogFailure: 'Falha ao enviar log de envio:',
   forwardLogFailure: 'Falha ao encaminhar log para destinatário padrão:',
+  ticketLogFailure: 'Falha ao registrar atendimento no grupo:',
   groupWelcomeFailure: 'Falha ao enviar mensagem inicial do grupo:',
   reconnectingSession: 'Recriando sessão com',
   failingReconnectSession: 'Falha ao recriar sessão com'
@@ -28,5 +29,6 @@ export const SEND_MESSAGES = {
 export const GROUP_START_MESSAGES = {
   primary:
     '👋 Olá! Este grupo foi criado automaticamente pelo bot Confia Veículos. Envie "confiaVeiculos" quando quiser iniciar o atendimento.',
-  log: '🗒️ Grupo de logs criado automaticamente. Manteremos aqui o histórico das ações e notificações do bot.'
+  log: '🗒️ Grupo de logs criado automaticamente. Manteremos aqui o histórico das ações e notificações do bot.',
+  serviceLog: '🗒️ Grupo para os registros de atendimentos.'
 } as const

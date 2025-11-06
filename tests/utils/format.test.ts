@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatKilometers } from '../../src/utils/format.js'
+import { formatKilometers } from '../../src/shared/utils/format.js'
 
 describe('formatKilometers', () => {
   it('returns empty string when input is falsy', () => {

@@ -14,8 +14,11 @@ const normalizeTriggerText = (value: string): string =>
 export const normalizePlate = (text: string): string =>
   text.replace(/[^a-z0-9]/gi, '').toUpperCase()
 
+// export const matchesInitialTrigger = (text: string, trigger: string): boolean =>
+//   normalizeTriggerText(text) === normalizeTriggerText(trigger)
+// Sem mensagem pra iniciar
 export const matchesInitialTrigger = (text: string, trigger: string): boolean =>
-  normalizeTriggerText(text) === normalizeTriggerText(trigger)
+  true
 
 export const shouldResetConversation = (text: string): boolean => RESET_PATTERN.test(text)
 
@@ -29,7 +32,5 @@ export const extractPlateCandidate = (text: string): string | undefined => {
 }
 
 export const extractDigits = (text: string): string => text.replace(/\D/g, '')
-
 export const isPositiveResponse = (text: string): boolean => CONTINUE_YES_PATTERN.test(text.trim())
-
 export const isNegativeResponse = (text: string): boolean => CONTINUE_NO_PATTERN.test(text.trim())

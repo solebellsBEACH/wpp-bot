@@ -1,12 +1,13 @@
 export type ConversationStep =
-  | 'awaitingSelection'
   | 'awaitingPlate'
   | 'awaitingKm'
+  | 'awaitingSelection'
   | 'awaitingContinue'
 
 export interface ConversationData {
   plate?: string
   km?: string
+  name?: string
 }
 
 export interface ConversationState {
@@ -41,4 +42,17 @@ export interface ConversationManagerOptions {
     error: (message: string, err: unknown) => void
   }
   config?: Partial<ConversationConfig>
+  onTicketCreated?: (ticket: ConversationTicket) => Promise<void> | void
+}
+
+export interface ConversationMessageMeta {
+  name?: string
+}
+
+export interface ConversationTicket {
+  jid: string
+  plate?: string
+  km?: string
+  name?: string
+  type: 'urgent' | 'maintenance'
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maskJid } from '../src/logger.js'
+import { maskJid } from '../src/shared/utils/jid.js'
 import { DEFAULT_PRIMARY_JID } from '../src/shared/constants/settings.js'
 
 describe('maskJid', () => {

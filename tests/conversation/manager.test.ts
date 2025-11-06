@@ -15,12 +15,12 @@ describe('ConversationManager', () => {
     manager = new ConversationManager({ sendText })
   })
 
-  it('starts a new conversation and sends greeting', async () => {
+  it('starts a new conversation and asks for the plate first', async () => {
     await manager.handleMessage(JID, 'confiaVeiculos')
     expect(sendText).toHaveBeenCalledTimes(1)
     expect(sendText).toHaveBeenCalledWith(
       JID,
-      expect.stringContaining('Como podemos ajudar hoje?'),
+      expect.stringContaining('Por favor, informe a placa do veículo'),
       undefined
     )
   })
@@ -29,39 +29,16 @@ describe('ConversationManager', () => {
     await manager.handleMessage(JID, 'Confia Veículos!')
     expect(sendText).toHaveBeenCalledWith(
       JID,
-      expect.stringContaining('Como podemos ajudar hoje?'),
+      expect.stringContaining('Por favor, informe a placa do veículo'),
       undefined
     )
   })
 
-  it('handles full flow including validation and options', async () => {
+  it('handles the full flow collecting plate and km before the options', async () => {
     await manager.handleMessage(JID, 'confiaVeiculos')
     sendText.mockClear()
 
-    await manager.handleMessage(JID, 'abc')
-    expect(sendText).toHaveBeenNthCalledWith(
-      1,
-      JID,
-      expect.stringContaining('Não entendi sua escolha'),
-      undefined
-    )
-    expect(sendText).toHaveBeenNthCalledWith(
-      2,
-      JID,
-      expect.stringContaining('Responda com 1 para urgência'),
-      undefined
-    )
-
-    sendText.mockClear()
-    await manager.handleMessage(JID, '2')
-    expect(sendText).toHaveBeenCalledWith(
-      JID,
-      expect.stringContaining('Por favor, informe a placa'),
-      undefined
-    )
-
-    sendText.mockClear()
-    await manager.handleMessage(JID, 'placa inválida')
+    await manager.handleMessage(JID, '123')
     expect(sendText).toHaveBeenCalledWith(
       JID,
       expect.stringContaining('Placa inválida'),
@@ -86,6 +63,29 @@ describe('ConversationManager', () => {
 
     sendText.mockClear()
     await manager.handleMessage(JID, '45210')
+    expect(sendText).toHaveBeenCalledWith(
+      JID,
+      expect.stringContaining('Como podemos ajudar hoje?'),
+      undefined
+    )
+
+    sendText.mockClear()
+    await manager.handleMessage(JID, 'abc')
+    expect(sendText).toHaveBeenNthCalledWith(
+      1,
+      JID,
+      expect.stringContaining('Não entendi sua escolha'),
+      undefined
+    )
+    expect(sendText).toHaveBeenNthCalledWith(
+      2,
+      JID,
+      expect.stringContaining('Responda com 1 para urgência'),
+      undefined
+    )
+
+    sendText.mockClear()
+    await manager.handleMessage(JID, '2')
     expect(sendText).toHaveBeenNthCalledWith(
       1,
       JID,
@@ -98,14 +98,18 @@ describe('ConversationManager', () => {
       expect.stringContaining('Deseja continuar o atendimento?'),
       undefined
     )
+
     sendText.mockClear()
     await manager.handleMessage(JID, 'sim')
     expect(sendText).toHaveBeenCalledWith(
       JID,
-      expect.stringContaining('Como podemos ajudar hoje?'),
+      expect.stringContaining('Por favor, informe a placa do veículo'),
       undefined
     )
 
+    sendText.mockClear()
+    await manager.handleMessage(JID, 'DEF2G34')
+    await manager.handleMessage(JID, '654321')
     sendText.mockClear()
     await manager.handleMessage(JID, '1')
     expect(sendText).toHaveBeenNthCalledWith(
@@ -120,6 +124,7 @@ describe('ConversationManager', () => {
       expect.stringContaining('Deseja continuar o atendimento?'),
       undefined
     )
+
     sendText.mockClear()
     await manager.handleMessage(JID, 'não')
     expect(sendText).toHaveBeenCalledWith(
@@ -129,7 +134,31 @@ describe('ConversationManager', () => {
     )
     sendText.mockClear()
     await manager.handleMessage(JID, '1')
-    expect(sendText).not.toHaveBeenCalled()
+    expect(sendText).toHaveBeenCalledWith(
+      JID,
+      expect.stringContaining('Por favor, informe a placa do veículo'),
+      undefined
+    )
+  })
+
+  it('emits ticket details after the user selects the service type', async () => {
+    const onTicketCreated = vi.fn()
+    manager = new ConversationManager({ sendText, onTicketCreated })
+
+    await manager.handleMessage(JID, 'confiaVeiculos', { name: 'Cliente' })
+    await manager.handleMessage(JID, 'ABC1D23')
+    await manager.handleMessage(JID, '50000')
+    await manager.handleMessage(JID, '1')
+
+    expect(onTicketCreated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jid: JID,
+        plate: 'ABC1D23',
+        km: '50000',
+        name: 'Cliente',
+        type: 'urgent'
+      })
+    )
   })
 
   it('resets the flow when user asks to restart', async () => {
@@ -139,7 +168,7 @@ describe('ConversationManager', () => {
     await manager.handleMessage(JID, 'reiniciar')
     expect(sendText).toHaveBeenCalledWith(
       JID,
-      expect.stringContaining('Como podemos ajudar hoje?'),
+      expect.stringContaining('Por favor, informe a placa do veículo'),
       undefined
     )
   })

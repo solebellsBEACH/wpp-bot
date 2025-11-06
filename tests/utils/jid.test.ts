@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeJid } from '../../src/utils/jid.js'
+import { normalizeJid } from '../../src/shared/utils/jid.js'
 
 describe('normalizeJid', () => {
   it('returns empty string when input is missing', () => {

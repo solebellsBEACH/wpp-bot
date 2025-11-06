@@ -46,7 +46,7 @@ export class BotMessageHandler {
 
     await this.deps.messageService.forwardLogMessage(from, name, text)
 
-    if (await this.deps.conversationManager.handleMessage(from, text)) {
+    if (await this.deps.conversationManager.handleMessage(from, text, { name })) {
       return
     }
 

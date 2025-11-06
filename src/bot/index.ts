@@ -3,7 +3,8 @@ import qrcode from 'qrcode-terminal'
 
 import {
   ConversationManager,
-  type ConversationConfig
+  type ConversationConfig,
+  type ConversationTicket
 } from '../conversation/manager.js'
 import {
   featureRegistry,
@@ -12,6 +13,8 @@ import {
 } from '../features.js'
 import { log } from '../logger.js'
 import { BOT_LOG_MESSAGES } from '../shared/constants/messages.js'
+import { formatKilometers } from '../shared/utils/format.js'
+import { maskJid } from '../shared/utils/jid.js'
 import { createSocket, type CreateSocketOptions } from '../whatsapp/index.js'
 import { createInitialGroupState, ensureManagedGroups, isAllowedChat } from './group-management.js'
 import { ensureDefaultFeatures } from './default-features.js'
@@ -55,7 +58,10 @@ export class Bot {
       logger: {
         error: (message, err) => log.err(message, (err as Error)?.message ?? err)
       },
-      config: this.options.conversationConfig
+      config: this.options.conversationConfig,
+      onTicketCreated: async (ticket) => {
+        await this.notifyTicket(ticket)
+      }
     })
 
     this.messageHandler = new BotMessageHandler({
@@ -158,6 +164,26 @@ export class Bot {
   private async greetDefaultRecipient(): Promise<void> {
     // Conversa começa somente após receber o gatilho "confiaVeiculos".
     return
+  }
+
+  private async notifyTicket(ticket: ConversationTicket): Promise<void> {
+    const recipient = this.getLogRecipient()
+    if (!recipient) return
+
+    const nameLabel = ticket.name ?? maskJid(ticket.jid)
+    const plateLabel = ticket.plate ?? 'placa não informada'
+    const kmLabel =
+      ticket.km && ticket.km.trim().length > 0
+        ? formatKilometers(ticket.km)
+        : 'quilometragem não informada'
+    const typeLabel = ticket.type === 'urgent' ? 'urgente' : 'manutenção'
+    const payload = `Atendimento - ${nameLabel}, placa ${plateLabel}, quilometragem ${kmLabel}, tipo ${typeLabel}`
+
+    try {
+      await this.messageService.sendText(recipient, payload, { forwardToLog: false })
+    } catch (err) {
+      log.err(BOT_LOG_MESSAGES.ticketLogFailure, (err as Error)?.message ?? err)
+    }
   }
 
   private showQrCode(qr: string): void {

@@ -4,6 +4,7 @@ export const BOT_LOG_MESSAGES = {
   notifyStartupFailure: 'Falha ao notificar início:',
   sendLogFailure: 'Falha ao enviar log de envio:',
   forwardLogFailure: 'Falha ao encaminhar log para destinatário padrão:',
+  ticketLogFailure: 'Falha ao registrar atendimento no grupo:',
   groupWelcomeFailure: 'Falha ao enviar mensagem inicial do grupo:',
   reconnectingSession: 'Recriando sessão com',
   failingReconnectSession: 'Falha ao recriar sessão com'

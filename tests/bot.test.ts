@@ -1,13 +1,17 @@
 import { EventEmitter } from 'node:events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockHandleMessage = vi.fn<[string, string], Promise<boolean>>().mockResolvedValue(false)
+const mockHandleMessage = vi
+  .fn<[string, string, Record<string, unknown>?], Promise<boolean>>()
+  .mockResolvedValue(false)
 const mockStartConversation = vi.fn<[string, boolean?], Promise<void>>().mockResolvedValue()
+const mockClearAll = vi.fn()
 
 vi.mock('../src/conversation/manager.js', () => ({
   ConversationManager: vi.fn().mockImplementation(() => ({
     handleMessage: mockHandleMessage,
-    startConversation: mockStartConversation
+    startConversation: mockStartConversation,
+    clearAll: mockClearAll
   }))
 }))
 
@@ -62,6 +66,7 @@ describe('Bot', () => {
     vi.clearAllMocks()
     mockHandleMessage.mockResolvedValue(false)
     mockStartConversation.mockResolvedValue()
+    mockClearAll.mockReset()
   })
 
   it('starts only once even when called multiple times', async () => {

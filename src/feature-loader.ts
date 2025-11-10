@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { FeatureDefinition } from './features.js'
-import type { Bot } from './bot.js'
+import type { Bot } from './bot/index.js'
+import { FEATURE_LOADER_ERROR_MESSAGES } from './shared/constants/messages.js'
 
 interface FeatureModule {
   default?: FeatureDefinition[] | (() => FeatureDefinition[] | Promise<FeatureDefinition[]>)
@@ -63,7 +64,7 @@ export class FeatureLoader {
     this.reloadTimer = setTimeout(() => {
       this.reloadTimer = undefined
       void this.load().catch((err) => {
-        console.error('Falha ao recarregar funcionalidades:', err)
+        console.error(FEATURE_LOADER_ERROR_MESSAGES.reloadFailure, err)
       })
     }, 200)
   }
